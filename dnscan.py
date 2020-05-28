@@ -1,17 +1,18 @@
+import gzip
 import socket
 
 class HostCache():
     def __init__(self):
-        # ensure 'hosts' file exists
-        open('hosts', 'a').close()
+        # ensure 'hosts.gz' file exists
+        open('hosts.gz', 'a').close()
 
         self.cache = {}
-        with open('hosts', 'r') as fin: 
+        with gzip.open('hosts.gz') as fin: 
             for ip_host in fin.readlines():
-                ip, host = ip_host.strip().split('\t')
+                ip, host = ip_host.decode().strip().split('\t')
                 self.cache[host] = ip
 
-        self.fw = open('hosts', 'a')
+        self.fw = gzip.open('hosts.gz', 'a')
 
     def __del__(self):
         self.fw.close()
@@ -20,7 +21,7 @@ class HostCache():
         return host in self.cache
 
     def add(self, host, ip):
-        self.fw.write(f'{ip}\t{host}\n')
+        self.fw.write(f'{ip}\t{host}\n'.encode())
 
 
 def gethostbyname(host):
