@@ -1,0 +1,13 @@
+# /etc/systemd/system
+[Unit]
+After=network.target
+Description=dnscan - Domain Name Scanner service
+
+[Service]
+ExecStart=/home/gituliar/src/dnscan/dnscan.py
+Restart=always
+User=gituliar
+WorkingDirectory=/home/gituliar/src/dnscan/
+
+[Install]
+WantedBy=multi-user.target
