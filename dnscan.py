@@ -7,9 +7,14 @@ Usage:
 import gzip
 import socket
 
-import docopt
-import dns
-
+try:
+    import docopt
+    import dns.resolver
+except ModuleNotFoundError as err:
+    print(f'Error: {err}.')
+    print('Hint: Resolve with')
+    print('    $ pip install dnspython docopt\n')
+    exit(1)
 
 __version__ = '20.06.12'
 
@@ -54,18 +59,40 @@ __version__ = '20.06.12'
 
 
 
-def get_dns_record(host):
-    "Return IP of the host or None"
+def get_dns_records(host):
+    "Return list of DNS (A/MX) records"
+    recs = []
+
+    # A-record
+#    try:
+#        ip = socket.gethostbyname(host)
+#        recs += [('A', ip)]
+#    except socket.gaierror:
+#        pass
+
+    a_resp = []
     try:
-        ip = socket.gethostbyname(host)
-        return ['A', ip]
-    except socket.gaierror:
-        pass
+        a_resp = dns.resolver.query(host, 'A')
+    except dns.resolver.NXDOMAIN as err:
+        print(err)
+    for a_rec in a_resp:
+        recs += [('A', a_rec.address)]
+
+    # MX-record
+    mx_resp = []
+    try:
+        mx_resp = dns.resolver.query(host, 'MX')
+    except dns.resolver.NXDOMAIN as err:
+        print(err)
+    for mx_rec in mx_resp:
+        recs += [('MX', str(mx_rec.exchange), mx_rec.preference)]
+
+    return recs
 
 
 def cmd_check(domain):
-    rec = get_dns_record(domain)
-    print(f"DNS A-record for '{domain}': {rec}")
+    rec = get_dns_records(domain)
+    print(f"DNS records (A/MX) for '{domain}': {rec}")
 
 def main(args):
     if args['check']:
