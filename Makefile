@@ -1,5 +1,6 @@
 run:
-	python3 dnscan.py
+	@python3 dnscan.py check 1.com
+	@python3 dnscan.py check narrativecode.com
 
 install:
 	sudo ln dnscand.service /etc/systemd/system/
