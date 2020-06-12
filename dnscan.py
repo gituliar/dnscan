@@ -6,6 +6,7 @@ Usage:
 """
 import gzip
 import socket
+import sys
 
 try:
     import docopt
@@ -74,7 +75,8 @@ def get_dns_records(host):
     try:
         a_resp = dns.resolver.query(host, 'A')
     except dns.resolver.NXDOMAIN as err:
-        print(err)
+        # No A-record exists
+        pass
     for a_rec in a_resp:
         recs += [('A', a_rec.address)]
 
@@ -83,16 +85,67 @@ def get_dns_records(host):
     try:
         mx_resp = dns.resolver.query(host, 'MX')
     except dns.resolver.NXDOMAIN as err:
-        print(err)
+        # No MX-record exists
+        pass
     for mx_rec in mx_resp:
         recs += [('MX', str(mx_rec.exchange), mx_rec.preference)]
 
     return recs
 
 
+def get_whois_record(host):
+    "Return WHOIS record for the host"
+    HOST, PORT = 'whois.verisign-grs.com', 43
+
+    if not host.endswith('.com'):
+        print('Warning: only .COM domains has WHOIS support')
+        return None
+    
+    s = None
+    for res in socket.getaddrinfo(HOST, PORT, socket.AF_UNSPEC, socket.SOCK_STREAM):
+        af, socktype, proto, canonname, sa = res
+        try:
+            s = socket.socket(af, socktype, proto)
+        except OSError as msg:
+            s = None
+            continue
+        try:
+            s.connect(sa)
+        except OSError as msg:
+            s.close()
+            s = None
+            continue
+        break
+    if s is None:
+        return None
+    with s:
+        s.sendall(bytes(host+'\r\n', 'utf-8'))
+        data = s.recv(1024)
+    rec = data.decode('utf-8')
+
+    if rec.startswith('No match'):
+        return None
+
+    def val(rec, field):
+        for r in rec.split('\r\n'):
+            r = r.strip()
+            if r.startswith(field):
+                _, value = r.split(':', 1)
+                return value.strip()
+
+    rec = {
+        'create': val(rec, 'Creation Date'),
+        'expiry': val(rec, 'Registry Expiry Date'),
+    }
+
+    return rec
+
+
 def cmd_check(domain):
-    rec = get_dns_records(domain)
-    print(f"DNS records (A/MX) for '{domain}': {rec}")
+    dns_rec = get_dns_records(domain)
+    print(f"DNS records (A/MX) for '{domain}': {dns_rec}")
+    whois_rec = get_whois_record(domain)
+    print(f"WHOIS record for '{domain}': {whois_rec}")
 
 def main(args):
     if args['check']:

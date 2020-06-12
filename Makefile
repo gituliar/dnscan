@@ -1,5 +1,6 @@
 run:
 	@python3 dnscan.py check 1.com
+	@python3 dnscan.py check gituliar.com
 	@python3 dnscan.py check narrativecode.com
 
 install:
