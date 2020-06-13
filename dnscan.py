@@ -5,6 +5,7 @@ Usage:
     dnscan.py check <domain>
 """
 import gzip
+import os
 import socket
 import sys
 
@@ -59,46 +60,71 @@ __version__ = '20.06.12'
 #        print(f'{ip}\t{host}')
 
 
+class ZoneFile():
+    def __init__(self, path):
+        self.zonefile = open(path, 'r')
 
-def get_dns_records(host):
-    "Return list of DNS (A/MX) records"
-    recs = []
+    def __del__(self):
+        if hasattr(self, 'zf') and self.zonefile:
+            self.zonefile.close()
 
-    # A-record
-#    try:
-#        ip = socket.gethostbyname(host)
-#        recs += [('A', ip)]
-#    except socket.gaierror:
-#        pass
+    def find(self, domain):
+        dns_records = []
+        for rec in self.zonefile:
+            rec = rec.strip()
+            if rec.startswith(domain):
+                dns_records.append(rec)
+        return dns_records
 
-    a_resp = []
+def open_zonefile(filename):
+    "Helper to open Zone Files relative to the current module"
+    return ZoneFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), filename))
+
+ZONE_NET = open_zonefile('zone/net')
+
+
+
+def get_dns_record(domain):
+    return get_dns_record_a(domain) + get_dns_record_mx(domain) + get_dns_record_ns(domain)
+
+def get_dns_record_a(domain):
+    "Return list of domain's DNS A-records"
     try:
-        a_resp = dns.resolver.query(host, 'A')
+        a_resp = dns.resolver.query(domain, 'A')
     except dns.resolver.NXDOMAIN as err:
-        # No A-record exists
-        pass
-    for a_rec in a_resp:
-        recs += [('A', a_rec.address)]
+        a_resp = [] # No A-records
 
-    # MX-record
-    mx_resp = []
+    dns_records = [('A', a_rec.address) for a_rec in a_resp]
+    return dns_records
+
+def get_dns_record_mx(domain):
+    "Return list of domain's DNS MX-records"
     try:
-        mx_resp = dns.resolver.query(host, 'MX')
+        mx_resp = dns.resolver.query(domain, 'MX')
     except dns.resolver.NXDOMAIN as err:
-        # No MX-record exists
-        pass
-    for mx_rec in mx_resp:
-        recs += [('MX', str(mx_rec.exchange), mx_rec.preference)]
+        mx_resp = [] # No MX-records
 
-    return recs
+    dns_records = [('MX', str(mx_rec.exchange), mx_rec.preference) for mx_rec in mx_resp]
+    return dns_records
+
+def get_dns_record_ns(domain):
+    "Return list of domain's DNS NS-records"
+    if not domain.endswith('.net'):
+        print('Warning: DNS Zone File lookup works with .NET domains only')
+        return []
+    dns_records = []
+    for rec in ZONE_NET.find(domain):
+        v = rec.split('\t')
+        dns_records += [(v[-2].upper(), v[-1])]
+    return dns_records
 
 
-def get_whois_record(host):
-    "Return WHOIS record for the host"
+def get_whois_record(domain):
+    "Return domain's WHOIS record"
     HOST, PORT = 'whois.verisign-grs.com', 43
 
-    if not host.endswith('.com'):
-        print('Warning: only .COM domains has WHOIS support')
+    if not domain.endswith('.com'):
+        print('Warning: WHOIS lookup works with .COM domains only')
         return None
     
     s = None
@@ -119,7 +145,7 @@ def get_whois_record(host):
     if s is None:
         return None
     with s:
-        s.sendall(bytes(host+'\r\n', 'utf-8'))
+        s.sendall(bytes(domain+'\r\n', 'utf-8'))
         data = s.recv(1024)
     rec = data.decode('utf-8')
 
@@ -142,10 +168,11 @@ def get_whois_record(host):
 
 
 def cmd_check(domain):
-    dns_rec = get_dns_records(domain)
-    print(f"DNS records (A/MX) for '{domain}': {dns_rec}")
+    dns_rec = get_dns_record(domain)
+    print(f"DNS records (A/MX/NS) for '{domain}': {dns_rec}")
     whois_rec = get_whois_record(domain)
     print(f"WHOIS record for '{domain}': {whois_rec}")
+
 
 def main(args):
     if args['check']:
