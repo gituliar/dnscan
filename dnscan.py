@@ -3,6 +3,7 @@
 
 Usage:
     dnscan.py check <domain>
+    dnscan.py scan
 """
 import gzip
 import os
@@ -43,21 +44,6 @@ __version__ = '20.06.12'
 #        self.fw.write(f'{ip}\t{host}\n'.encode())
 #
 #
-#def hosts_to_scan():
-#    for n in range(99999999):
-#        host = str(n)+'.com'
-#        yield host
-#
-#
-#def cmd_scan(args):
-#    cache = HostCache()
-#    # scan
-#    for host in hosts_to_scan():
-#        if cache.exist(host):
-#            continue
-#        ip = get_dns_record(host) or 'none'
-#        cache.add(host, ip)
-#        print(f'{ip}\t{host}')
 
 
 class ZoneFile():
@@ -76,36 +62,38 @@ class ZoneFile():
                 dns_records.append(rec)
         return dns_records
 
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def open_zonefile(filename):
     "Helper to open Zone Files relative to the current module"
-    return ZoneFile(os.path.join(os.path.dirname(os.path.abspath(__file__)), filename))
+    return ZoneFile(os.path.join(MODULE_DIR, filename))
 
 ZONE_NET = open_zonefile('zone/net')
 
-
-
 def get_dns_record(domain):
-    return get_dns_record_a(domain) + get_dns_record_mx(domain) + get_dns_record_ns(domain)
+    return (get_dns_record_a(domain) or []) + (get_dns_record_mx(domain) or []) + (get_dns_record_ns(domain) or [])
 
 def get_dns_record_a(domain):
     "Return list of domain's DNS A-records"
     try:
-        a_resp = dns.resolver.query(domain, 'A')
-    except dns.resolver.NXDOMAIN as err:
-        a_resp = [] # No A-records
+        ip = socket.gethostbyname(domain)
+        print(f'{domain} = {ip}')
+        return [('A', ip)]
+    except socket.gaierror:
+        return []
+    except Exception as err:
+        print(f'ERROR: {err}')
+        return None
 
-    dns_records = [('A', a_rec.address) for a_rec in a_resp]
-    return dns_records
+    resp = dns_query(domain, 'A')
+    if resp is not None:
+        return [('A', a_rec.address) for a_rec in resp]
 
 def get_dns_record_mx(domain):
     "Return list of domain's DNS MX-records"
-    try:
-        mx_resp = dns.resolver.query(domain, 'MX')
-    except dns.resolver.NXDOMAIN as err:
-        mx_resp = [] # No MX-records
-
-    dns_records = [('MX', str(mx_rec.exchange), mx_rec.preference) for mx_rec in mx_resp]
-    return dns_records
+    resp = dns_query(domain, 'MX')
+    if resp is not None:
+        return [('MX', str(mx_rec.exchange), mx_rec.preference) for mx_rec in resp]
 
 def get_dns_record_ns(domain):
     "Return list of domain's DNS NS-records"
@@ -117,6 +105,16 @@ def get_dns_record_ns(domain):
         v = rec.split('\t')
         dns_records += [(v[-2].upper(), v[-1])]
     return dns_records
+
+def dns_query(domain, rdtype):
+    "Wrapper for dnspython's query logic"
+    try:
+        a_resp = dns.resolver.query(domain, rdtype)
+    except dns.resolver.NXDOMAIN as err:
+        a_resp = [] # No records
+    except Exception as err:
+        print(f"ERROR: {err}")
+        return None
 
 
 def get_whois_record(domain):
@@ -174,9 +172,40 @@ def cmd_check(domain):
     print(f"WHOIS record for '{domain}': {whois_rec}")
 
 
+def int_com():
+    for n in range(99999999):
+        host = str(n)+'.com'
+        yield host
+
+def cmd_scan(domains_to_scan=int_com()):
+    cache_filename = os.path.join(MODULE_DIR, 'dnscan.cache')
+
+    try:
+        with open(cache_filename, 'r') as fr:
+            cache = [domain.strip() for domain in fr.readlines()]
+    except FileNotFoundError:
+        cache = []
+
+    print('Available domains:')
+    with open(cache_filename, 'a') as fw:
+        for domain in domains_to_scan:
+            if domain in cache:
+                continue
+            print(domain)
+            #if get_dns_record_a(domain) or get_dns_record_mx(domain) or get_whois_record(domain):
+            if get_whois_record(domain):
+                fw.write(domain+'\n')
+                continue
+            # Found free domain
+            print(f'{d}')
+            break
+
+
 def main(args):
     if args['check']:
         return cmd_check(args['<domain>'])
+    elif args['scan']:
+        return cmd_scan()
     else:
         raise NotImplementedError()
 
