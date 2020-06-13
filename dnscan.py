@@ -182,7 +182,8 @@ def cmd_scan(domains_to_scan=int_com()):
 
     try:
         with open(cache_filename, 'r') as fr:
-            cache = [domain.strip() for domain in fr.readlines()]
+            # get only domains
+            cache = [rec.strip().split('\t', 1)[0] for rec in fr.readlines()]
     except FileNotFoundError:
         cache = []
 
@@ -193,8 +194,10 @@ def cmd_scan(domains_to_scan=int_com()):
                 continue
             print(domain)
             #if get_dns_record_a(domain) or get_dns_record_mx(domain) or get_whois_record(domain):
-            if get_whois_record(domain):
-                fw.write(domain+'\n')
+            whois_rec = get_whois_record(domain)
+            if whois_rec:
+                rec = ';'.join(f"{key}={val}" for key,val in whois_rec.items())
+                fw.write(f"{domain}\tWHOIS\t{rec}\n")
                 continue
             # Found free domain
             print(f'{d}')
