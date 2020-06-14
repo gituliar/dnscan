@@ -178,17 +178,17 @@ def int_com():
         yield host
 
 def cmd_scan(domains_to_scan=int_com()):
-    cache_filename = os.path.join(MODULE_DIR, 'dnscan.cache')
 
+    cache_filename = os.path.join(MODULE_DIR, 'dnscan.cache.gz')
     try:
-        with open(cache_filename, 'r') as fr:
+        with gzip.open(cache_filename, 'r') as fr:
             # get only domains
-            cache = [rec.strip().split('\t', 1)[0] for rec in fr.readlines()]
+            cache = [rec.decode().strip().split('\t', 1)[0] for rec in fr.readlines()]
     except FileNotFoundError:
         cache = []
 
     print('Available domains:')
-    with open(cache_filename, 'a') as fw:
+    with gzip.open(cache_filename, 'a') as fw:
         for domain in domains_to_scan:
             if domain in cache:
                 continue
@@ -197,7 +197,7 @@ def cmd_scan(domains_to_scan=int_com()):
             whois_rec = get_whois_record(domain)
             if whois_rec:
                 rec = ';'.join(f"{key}={val}" for key,val in whois_rec.items())
-                fw.write(f"{domain}\tWHOIS\t{rec}\n")
+                fw.write(f"{domain}\tWHOIS\t{rec}\n".encode())
                 continue
             # Found free domain
             print(f'{d}')
