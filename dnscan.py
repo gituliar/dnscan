@@ -16,39 +16,18 @@ try:
 except ModuleNotFoundError as err:
     print(f'Error: {err}.')
     print('Hint: Resolve with')
-    print('    $ pip install dnspython docopt\n')
+    print('    $ pip3 install dnspython docopt\n')
     exit(1)
 
-__version__ = '20.06.12'
-
-#class HostCache():
-#    def __init__(self):
-#        # ensure 'hosts.gz' file exists
-#        open('hosts.gz', 'a').close()
-#
-#        self.cache = {}
-#        with gzip.open('hosts.gz') as fin: 
-#            for ip_host in fin.readlines():
-#                ip, host = ip_host.decode().strip().split('\t')
-#                self.cache[host] = ip
-#
-#        self.fw = gzip.open('hosts.gz', 'a')
-#
-#    def __del__(self):
-#        self.fw.close()
-#
-#    def exist(self, host):
-#        return host in self.cache
-#
-#    def add(self, host, ip):
-#        self.fw.write(f'{ip}\t{host}\n'.encode())
-#
-#
+__version__ = '20.06.14'
 
 
 class ZoneFile():
     def __init__(self, path):
-        self.zonefile = open(path, 'r')
+        try:
+            self.zonefile = open(path, 'r')
+        except FileNotFoundError:
+            self.zonefile = []
 
     def __del__(self):
         if hasattr(self, 'zf') and self.zonefile:
