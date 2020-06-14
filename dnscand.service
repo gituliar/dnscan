@@ -4,7 +4,7 @@ After=network.target
 Description=dnscan - Domain Name Scanner service
 
 [Service]
-ExecStart=/home/gituliar/src/dnscan/dnscan.py
+ExecStart=/home/gituliar/src/dnscan/dnscan.py scan
 Restart=always
 User=gituliar
 WorkingDirectory=/home/gituliar/src/dnscan/
