@@ -171,7 +171,6 @@ def cmd_scan(domains_to_scan=int_com()):
         for domain in domains_to_scan:
             if domain in cache:
                 continue
-            print(domain)
             #if get_dns_record_a(domain) or get_dns_record_mx(domain) or get_whois_record(domain):
             whois_rec = get_whois_record(domain)
             if whois_rec:
@@ -179,8 +178,7 @@ def cmd_scan(domains_to_scan=int_com()):
                 fw.write(f"{domain}\tWHOIS\t{rec}\n".encode())
                 continue
             # Found free domain
-            print(f'{d}')
-            break
+            print(f'{domain}')
 
 
 def main(args):
