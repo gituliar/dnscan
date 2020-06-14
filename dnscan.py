@@ -3,7 +3,7 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py scan
+    dnscan.py scan <top-level-domain>
 """
 import gzip
 import os
@@ -100,8 +100,9 @@ def get_whois_record(domain):
     "Return domain's WHOIS record"
     HOST, PORT = 'whois.verisign-grs.com', 43
 
-    if not domain.endswith('.com'):
-        print('Warning: WHOIS lookup works with .COM domains only')
+    root_domain = domain.split('.')[-1]
+    if root_domain not in ('com', 'net'):
+        print('Warning: WHOIS lookup works with .COM or .NET domains only')
         return None
     
     s = None
@@ -151,14 +152,20 @@ def cmd_check(domain):
     print(f"WHOIS record for '{domain}': {whois_rec}")
 
 
-def int_com():
+def int_tld(tld):
     for n in range(99999999):
-        host = str(n)+'.com'
+        host = str(n)+'.'+tld
         yield host
 
-def cmd_scan(domains_to_scan=int_com()):
 
-    cache_filename = os.path.join(MODULE_DIR, 'dnscan.cache.gz')
+def cmd_scan(tld, domains_to_scan=None):
+    print(f"dnscan.py v{__version__} (PID={os.getpid()})")
+
+    domains_to_scan = domains_to_scan or int_tld(tld)
+
+
+    print('INFO: read cache')
+    cache_filename = os.path.join(MODULE_DIR, f'dnscan.cache.{tld}.gz')
     try:
         with gzip.open(cache_filename, 'r') as fr:
             # get only domains
@@ -185,7 +192,7 @@ def main(args):
     if args['check']:
         return cmd_check(args['<domain>'])
     elif args['scan']:
-        return cmd_scan()
+        return cmd_scan(args['<top-level-domain>'])
     else:
         raise NotImplementedError()
 
