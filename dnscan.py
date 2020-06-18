@@ -166,12 +166,12 @@ def cmd_min(tld, verbose=False):
         with gzip.open(cache_filename, 'r') as fr:
             prnt(f"Read cache at {cache_filename}")
             # get only domains
-            cache = [rec.decode().strip().split('\t', 1)[0] for rec in fr.readlines()]
+            cache = set([rec.decode().strip().split('\t', 1)[0] for rec in fr.readlines()])
     except FileNotFoundError:
         prnt(f"No cache at '{cache_filename}'")
         cache = []
 
-    #prnt('Available domains:')
+    prnt('Start WHOIS scanning')
     with gzip.open(cache_filename, 'a') as fw:
         for domain in domains_to_scan:
             if domain in cache:
