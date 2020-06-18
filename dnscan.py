@@ -3,7 +3,7 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py scan <top-level-domain>
+    dnscan.py [-v] min <tld>
 """
 import gzip
 import os
@@ -11,15 +11,15 @@ import socket
 import sys
 
 try:
-    import docopt
     import dns.resolver
+    import docopt
 except ModuleNotFoundError as err:
     print(f'Error: {err}.')
     print('Hint: Resolve with')
-    print('    $ pip3 install dnspython docopt\n')
+    print('$ pip3 install dnspython docopt\n')
     exit(1)
 
-__version__ = '20.06.14'
+__version__ = '20.06.18'
 
 
 class ZoneFile():
@@ -157,28 +157,25 @@ def int_tld(tld):
         host = str(n)+'.'+tld
         yield host
 
+def cmd_min(tld, verbose=False):
+    prnt = print if verbose else lambda msg: None
+    domains_to_scan = int_tld(tld)
 
-def cmd_scan(tld, domains_to_scan=None):
-    print(f"dnscan.py v{__version__} (PID={os.getpid()})")
-
-    domains_to_scan = domains_to_scan or int_tld(tld)
-
-
-    print('INFO: read cache')
     cache_filename = os.path.join(MODULE_DIR, f'dnscan.cache.{tld}.gz')
     try:
         with gzip.open(cache_filename, 'r') as fr:
+            prnt(f"Read cache at {cache_filename}")
             # get only domains
             cache = [rec.decode().strip().split('\t', 1)[0] for rec in fr.readlines()]
     except FileNotFoundError:
+        prnt(f"No cache at '{cache_filename}'")
         cache = []
 
-    print('Available domains:')
+    #prnt('Available domains:')
     with gzip.open(cache_filename, 'a') as fw:
         for domain in domains_to_scan:
             if domain in cache:
                 continue
-            #if get_dns_record_a(domain) or get_dns_record_mx(domain) or get_whois_record(domain):
             whois_rec = get_whois_record(domain)
             if whois_rec:
                 rec = ';'.join(f"{key}={val}" for key,val in whois_rec.items())
@@ -186,16 +183,21 @@ def cmd_scan(tld, domains_to_scan=None):
                 continue
             # Found free domain
             print(f'{domain}')
+            break
 
 
 def main(args):
+    #print(f"dnscan.py v{__version__}")
     if args['check']:
         return cmd_check(args['<domain>'])
-    elif args['scan']:
-        return cmd_scan(args['<top-level-domain>'])
+    elif args['min']:
+        return cmd_min(args['<tld>'], args['-v'])
     else:
         raise NotImplementedError()
 
 if __name__ == '__main__':
-    args = docopt.docopt(__doc__, version = "dnscan.py "+__version__)
-    main(args)
+    args = docopt.docopt(__doc__)
+    try:
+        main(args)
+    except KeyboardInterrupt:
+        pass
