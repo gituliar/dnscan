@@ -1,8 +1,14 @@
-run:
+check:
 	@python3 dnscan.py check 1.com
 	@python3 dnscan.py check gituliar.com
 	@python3 dnscan.py check gituliar.net
 	@python3 dnscan.py check narrativecode.com
+
+scan-com:
+	@python3 dnscan.py scan com
+
+scan-net:
+	@python3 dnscan.py scan net
 
 install:
 	sudo ln dnscand.service /etc/systemd/system/
