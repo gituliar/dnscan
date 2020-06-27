@@ -1,11 +1,10 @@
 # /etc/systemd/system
 [Unit]
 After=network.target
-Description=dnscan - Domain Name Scanner service
+Description=dnscan min daemon
 
 [Service]
-ExecStart=/home/gituliar/src/dnscan/dnscan.py scan
-Restart=always
+ExecStart=/home/gituliar/src/dnscan/dnscan.py -o /home/gituliar/src/dnscan/dnscand.out -n 5 min com io net org 
 User=gituliar
 WorkingDirectory=/home/gituliar/src/dnscan/
 

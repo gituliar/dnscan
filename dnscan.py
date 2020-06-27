@@ -3,13 +3,15 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py [-v | -d] [-n <num>] [--hex] min <tld> ...
+    dnscan.py [-n <num>] [--hex] [-o <file>] [-v | -d] min <tld> ...
 
 Options:
     -hex        Show hexadecimal domains, like 0x1234.com
     -n <num>    Show n smallest domains [default: 1]
+    -o <file>   Redirect otuput to file (default: stdout)
 """
 import gzip
+from   io import StringIO
 import logging
 import os
 import socket
@@ -498,8 +500,7 @@ class DomainResolver():
 
         return False
 
-def cmd_min(tld, domains, n=1, verbose=False):
-
+def cmd_min(tld, domains, n, fout, verbose=False):
     log.info('Start WHOIS scanning')
     r = DomainResolver.instance()
 
@@ -513,7 +514,7 @@ def cmd_min(tld, domains, n=1, verbose=False):
             return
 
         if not domain_exist:
-            print(f'{domain}')
+            fout.write(f'{domain}\n')
             n -= 1
             if n == 0:
                 break
@@ -536,14 +537,26 @@ def main(args):
         log.setLevel(logging.DEBUG)
 
     if args['check']:
-        return cmd_check(args['<domain>'])
-    elif args['min']:
+        cmd_check(args['<domain>'])
+        return
+
+    if args['min']:
         n = int(args['-n'])
+
+        buf = StringIO()
         for tld in args['<tld>']:
             domains = domains_int(tld, args['--hex'])
-            cmd_min(tld, domains, n, args['-v'])
-    else:
-        raise NotImplementedError()
+            cmd_min(tld, domains, n, buf, args['-v'])
+
+        if args['-o']:
+            with open(args['-o'], 'w') as fw:
+                fw.write(buf.getvalue())
+        else:
+            print(buf.getvalue(), end='')
+
+        return
+
+    raise NotImplementedError()
 
 if __name__ == '__main__':
     args = docopt.docopt(__doc__)

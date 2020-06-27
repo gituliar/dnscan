@@ -1,0 +1,10 @@
+[Unit]
+Description=dnscan min job
+Requires=dnscan.service
+[Timer]
+Unit=dnscan.service
+OnUnitInactiveSec=15m
+RandomizedDelaySec=15m
+AccuracySec=1s
+[Install]
+WantedBy=timers.target
