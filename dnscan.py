@@ -3,7 +3,10 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py [-v | -d] min <tld>
+    dnscan.py [-v | -d] [-n <num>] min <tld>
+
+Options:
+    -n <num>    Show n smallest domains [default: 1]
 """
 import gzip
 import logging
@@ -23,7 +26,7 @@ except ModuleNotFoundError as err:
     log.error('$ pip3 install dnspython docopt\n')
     exit(1)
 
-__version__ = '20.06.26'
+__version__ = '20.06.27'
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -496,7 +499,7 @@ class DomainResolver():
 
         return False
 
-def cmd_min(tld, verbose=False):
+def cmd_min(tld, n, verbose=False):
     domains_to_scan = int_tld(tld)
 
     log.info('Start WHOIS scanning')
@@ -513,7 +516,9 @@ def cmd_min(tld, verbose=False):
 
         if not domain_exist:
             print(f'{domain}')
-            break
+            n -= 1
+            if n == 0:
+                break
 
 
 def main(args):
@@ -529,7 +534,7 @@ def main(args):
     if args['check']:
         return cmd_check(args['<domain>'])
     elif args['min']:
-        return cmd_min(args['<tld>'], args['-v'])
+        return cmd_min(args['<tld>'], int(args['-n']), args['-v'])
     else:
         raise NotImplementedError()
 
