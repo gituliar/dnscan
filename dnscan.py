@@ -3,9 +3,10 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py [-v | -d] [-n <num>] min <tld>
+    dnscan.py [-v | -d] [-n <num>] [--hex] min <tld>
 
 Options:
+    -hex        Show hexadecimal domains, like 0x1234.com
     -n <num>    Show n smallest domains [default: 1]
 """
 import gzip
@@ -51,11 +52,6 @@ def cmd_check(domain):
     whois_rec = WhoisClient(tld).get_record(domain)
     print(f"WHOIS record for '{domain}': {whois_rec}")
 
-
-def int_tld(tld):
-    for n in range(99999999):
-        host = str(n)+'.'+tld
-        yield host
 
 class CacheFile():
     def __init__(self, path):
@@ -499,13 +495,12 @@ class DomainResolver():
 
         return False
 
-def cmd_min(tld, n, verbose=False):
-    domains_to_scan = int_tld(tld)
+def cmd_min(tld, domains, n=1, verbose=False):
 
     log.info('Start WHOIS scanning')
     r = DomainResolver.instance()
 
-    for domain in domains_to_scan:
+    for domain in domains:
         subdomain = domain[:-len(tld)-1]
         try:
             domain_exist = r.exist(subdomain, tld)
@@ -520,10 +515,16 @@ def cmd_min(tld, n, verbose=False):
             if n == 0:
                 break
 
+def domains_int(tld, hex_base=False):
+    base = '{0}'
+    if hex_base:
+        base = '0x{0:x}'
+    for n in range(99999999):
+        domain = base.format(n)+'.'+tld
+        yield domain
+
 
 def main(args):
-    #print(f"dnscan.py v{__version__}")
-
     logging.basicConfig(format='%(asctime)s :: %(name)s :: %(levelname)s :: %(message)s')
     log.setLevel(logging.WARNING)
     if args['-v']:
@@ -534,7 +535,10 @@ def main(args):
     if args['check']:
         return cmd_check(args['<domain>'])
     elif args['min']:
-        return cmd_min(args['<tld>'], int(args['-n']), args['-v'])
+        tld = args['<tld>']
+        n = int(args['-n'])
+        domains = domains_int(tld, args['--hex'])
+        return cmd_min(tld, domains, n, args['-v'])
     else:
         raise NotImplementedError()
 
