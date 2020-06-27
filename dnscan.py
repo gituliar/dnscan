@@ -3,7 +3,7 @@
 
 Usage:
     dnscan.py check <domain>
-    dnscan.py [-v | -d] [-n <num>] [--hex] min <tld>
+    dnscan.py [-v | -d] [-n <num>] [--hex] min <tld> ...
 
 Options:
     -hex        Show hexadecimal domains, like 0x1234.com
@@ -535,10 +535,10 @@ def main(args):
     if args['check']:
         return cmd_check(args['<domain>'])
     elif args['min']:
-        tld = args['<tld>']
         n = int(args['-n'])
-        domains = domains_int(tld, args['--hex'])
-        return cmd_min(tld, domains, n, args['-v'])
+        for tld in args['<tld>']:
+            domains = domains_int(tld, args['--hex'])
+            cmd_min(tld, domains, n, args['-v'])
     else:
         raise NotImplementedError()
 
