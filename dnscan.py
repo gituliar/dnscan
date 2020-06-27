@@ -113,12 +113,15 @@ class DnsClient():
     def dns_query(self, domain, rdtype):
         "Wrapper for dnspython's query logic"
         try:
-            a_resp = dns.resolver.query(domain, rdtype)
+            resp = dns.resolver.query(domain, rdtype)
         except dns.resolver.NXDOMAIN as err:
-            a_resp = [] # No records
+            resp = []
+        except dns.resolver.NoAnswer as err:
+            resp = []
         except Exception as err:
             log.error(f"\n{err}")
             return None
+        return resp
     
 
 class WhoisClient():
